@@ -3,8 +3,9 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const config = require('./config/config'); 
-const pdfRoutes = require('./routes/pdfRoutes');
-const browserManager = require('./utils/browserManager'); // Necessary import for shutdown
+const generateRoutes = require('./routes/generate'); // Updated for generation logic
+const templateRoutes = require('./routes/templates'); // For CRUD management
+const browserManager = require('./utils/browserManager'); 
 
 const app = express();
 
@@ -44,7 +45,11 @@ app.get('/health', (req, res) => {
 });
 
 // 6. Routes
-app.use('/api/pdf', pdfRoutes);
+// Mount generation endpoints (POST /api/generate and POST /api/generate-html)
+app.use('/api', generateRoutes); 
+
+// Mount template management endpoints (GET, POST, PUT, DELETE /api/templates)
+app.use('/api/templates', templateRoutes); 
 
 // 7. Start Server
 const server = app.listen(config.port, () => {

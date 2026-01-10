@@ -1,5 +1,6 @@
 const { generatePDF } = require('../utils/pdfGenerator');
 const templateStore = require('../utils/templateStore');
+const processor = require('../utils/templateProcessor'); // Import the new processor
 
 /**
  * PDF Controller
@@ -7,7 +8,7 @@ const templateStore = require('../utils/templateStore');
  * the PDF generation to the utility service.
  */
 
-// 1. Generate PDF from raw HTML/CSS
+// 1. Generate PDF from raw HTML/CSS (No template needed)
 exports.generatePDF = async (req, res) => {
   const { html, css, options } = req.body;
 
@@ -26,25 +27,29 @@ exports.generatePDF = async (req, res) => {
   }
 };
 
-// 2. NEW: Generate PDF using a stored template
+// 2. NEW & UPDATED: Generate PDF using a stored template with Dynamic Data
 exports.generateFromTemplate = async (req, res) => {
-  const { templateId, options } = req.body;
+  // Now extracting 'data' from the request body
+  const { templateId, data, options } = req.body;
 
   try {
-    // Retrieve template from memory store
+    // 1. Retrieve base template from memory store
     const template = templateStore.getTemplate(templateId);
     
-    // Generate PDF using the stored HTML and CSS
-    const pdfBuffer = await generatePDF(template.html, template.css, options);
+    // 2. Process HTML: Replace {{variables}} with the provided data
+    // This supports nested objects like {{user.name}}
+    const processedHtml = processor.replaceVariables(template.html, data || {});
+    
+    // 3. Generate PDF using the processed HTML and original CSS
+    const pdfBuffer = await generatePDF(processedHtml, template.css, options);
     
     sendPdfResponse(res, pdfBuffer, `${template.name}.pdf`);
   } catch (error) {
-    // If templateId isn't found, getTemplate throws an error which we catch here
     handleError(res, error);
   }
 };
 
-// --- Helper Functions to keep code DRY (Don't Repeat Yourself) ---
+// --- Helper Functions to keep code DRY ---
 
 const sendPdfResponse = (res, buffer, filename = 'generated.pdf') => {
   res.contentType('application/pdf');
@@ -54,6 +59,7 @@ const sendPdfResponse = (res, buffer, filename = 'generated.pdf') => {
 
 const handleError = (res, error) => {
   console.error('Controller Error:', error.message);
+  // Use 404 for missing templates, otherwise 500
   const statusCode = error.message.includes('not found') ? 404 : 500;
   res.status(statusCode).json({ 
     error: 'Generation Failed', 
