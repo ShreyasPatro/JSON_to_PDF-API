@@ -1,0 +1,14 @@
+services:
+  pdf-api:
+    build: .
+    ports:
+      - "3000:3000"
+    # This tells Docker to load all variables from your .env file
+    env_file:
+      - .env
+    # We still keep NODE_ENV here just to be safe, or as an override
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./data:/usr/src/app/data
+    restart: always

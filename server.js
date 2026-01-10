@@ -3,8 +3,14 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const config = require('./config/config'); 
-const generateRoutes = require('./routes/generate'); // Updated for generation logic
-const templateRoutes = require('./routes/templates'); // For CRUD management
+
+// Route Imports
+const generateRoutes = require('./routes/generate');
+const templateRoutes = require('./routes/templates');
+const authRoutes = require('./routes/auth'); // New Auth Routes
+
+// Middleware & Manager Imports
+const authenticate = require('./middleware/auth'); // New Auth Middleware
 const browserManager = require('./utils/browserManager'); 
 
 const app = express();
@@ -18,7 +24,7 @@ app.use(cors());
 // 3. Parse JSON bodies up to 10mb
 app.use(express.json({ limit: '10mb' }));
 
-// 4. Rate Limiting (Applied specifically to /api/ routes)
+// 4. Rate Limiting
 const apiLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.max,
@@ -35,7 +41,7 @@ const apiLimiter = rateLimit({
 
 app.use('/api/', apiLimiter);
 
-// 5. Health Check Endpoint
+// 5. Health Check Endpoint (Public)
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'UP', 
@@ -45,11 +51,22 @@ app.get('/health', (req, res) => {
 });
 
 // 6. Routes
-// Mount generation endpoints (POST /api/generate and POST /api/generate-html)
-app.use('/api', generateRoutes); 
 
-// Mount template management endpoints (GET, POST, PUT, DELETE /api/templates)
-app.use('/api/templates', templateRoutes); 
+// A. Auth Endpoints (Public - used to Register/Login)
+app.use('/api/auth', authRoutes);
+
+/**
+ * PROTECTED ROUTES
+ * The 'authenticate' middleware is added here.
+ * Any request to these endpoints MUST include a valid JWT in the Header:
+ * Authorization: Bearer <your_token>
+ */
+
+// B. Generation endpoints
+app.use('/api', authenticate, generateRoutes); 
+
+// C. Template management endpoints
+app.use('/api/templates', authenticate, templateRoutes); 
 
 // 7. Start Server
 const server = app.listen(config.port, () => {
@@ -65,10 +82,8 @@ const gracefulShutdown = async (signal) => {
   console.info(`\n${signal} signal received.`);
   
   try {
-    // Close the shared browser instance first
     await browserManager.closeBrowser();
     
-    // Then close the HTTP server
     server.close(() => {
       console.log('HTTP server and Browser closed. Process finished.');
       process.exit(0);
@@ -79,6 +94,5 @@ const gracefulShutdown = async (signal) => {
   }
 };
 
-// Listen for termination signals (Ctrl+C or System Kill)
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));

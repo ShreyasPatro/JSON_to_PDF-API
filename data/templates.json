@@ -1,0 +1,10 @@
+[
+  {
+    "id": "invoice-v1",
+    "name": "Docker Standard Invoice",
+    "html": "<h1>Invoice for {{client}}</h1><p>Amount: ${{amount}}</p>",
+    "css": "h1 { color: #2563eb; }",
+    "createdAt": "2026-01-10T17:27:03.661Z",
+    "updatedAt": "2026-01-10T17:27:03.661Z"
+  }
+]

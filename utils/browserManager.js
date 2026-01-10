@@ -7,32 +7,37 @@ let browserInstance = null;
  */
 const getBrowser = async () => {
   try {
-    // If a browser already exists and is still connected, return it
     if (browserInstance && browserInstance.connected) {
       return browserInstance;
     }
 
     console.log('Starting a new Puppeteer browser instance...');
 
-    // Launch a new browser instance with optimized flags
-    browserInstance = await puppeteer.launch({
+    /**
+     * DOCKER ADAPTATION:
+     * In Docker (Alpine), we use the system-installed Chromium.
+     * Locally, we let Puppeteer use its default path.
+     */
+    const isDocker = process.env.PUPPETEER_EXECUTABLE_PATH;
+    
+    const launchOptions = {
       headless: 'new',
-      // CRITICAL: Force Puppeteer to use its own downloaded browser
-      executablePath: puppeteer.executablePath(), 
+      // If the environment variable is set (Docker), use that path. 
+      // Otherwise, use Puppeteer's default.
+      executablePath: isDocker || puppeteer.executablePath(),
       args: [
         '--no-sandbox',                
         '--disable-setuid-sandbox',    
-        '--disable-dev-shm-usage',     
+        '--disable-dev-shm-usage', // Important: Docker containers often have limited shared memory (/dev/shm)
         '--disable-gpu',               
-        //'--no-first-run',
         '--no-zygote',
-       // '--single-process',
         '--remote-debugging-port=9222' 
       ],
       ignoreHTTPSErrors: true
-    });
+    };
 
-    // Listen for unexpected disconnects
+    browserInstance = await puppeteer.launch(launchOptions);
+
     browserInstance.on('disconnected', () => {
       console.warn('Puppeteer browser disconnected. Resetting instance.');
       browserInstance = null;
