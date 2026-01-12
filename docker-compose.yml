@@ -3,12 +3,19 @@ services:
     build: .
     ports:
       - "3000:3000"
-    # This tells Docker to load all variables from your .env file
-    env_file:
-      - .env
-    # We still keep NODE_ENV here just to be safe, or as an override
     environment:
-      - NODE_ENV=development
-    volumes:
-      - ./data:/usr/src/app/data
-    restart: always
+      - DB_HOST=db
+      - DB_USER=admin
+      - DB_PASS=secret
+      - DB_NAME=pdf_service
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: pdf_service
+    ports:
+      - "5432:5432"
