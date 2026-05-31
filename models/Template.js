@@ -3,7 +3,8 @@ const sequelize = require('../config/database');
 
 const Template = sequelize.define('Template', {
   id: {
-    type: DataTypes.STRING,
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
     allowNull: false
   },
@@ -20,10 +21,9 @@ const Template = sequelize.define('Template', {
     defaultValue: '',
     allowNull: false
   },
-  ownerId: {
+  userId: {
     type: DataTypes.UUID,
     allowNull: false,
-    field: 'owner_id' 
   }
 }, {
   tableName: 'Templates',

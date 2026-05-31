@@ -9,7 +9,7 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Asynchronously create user in PostgreSQL
+    // Uses your class-based UserStore to hash and save
     const user = await userStore.createUser(email, password);
     
     res.status(201).json({ 
@@ -28,19 +28,11 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // CRITICAL: Must use 'await' now that userStore queries the database
     const user = await userStore.findByEmail(email);
 
-    // Verify user exists and password matches hashed version in DB
+    // Verify hashed password
     if (user && (await bcrypt.compare(password, user.password))) {
-      
-      // Include user ID in payload to support multi-tenancy
-      const payload = { 
-        id: user.id, 
-        email: user.email 
-      };
-
+      const payload = { id: user.id, email: user.email };
       const secret = process.env.JWT_SECRET || 'supersecret';
 
       const token = jwt.sign(payload, secret, { expiresIn: '1h' });
@@ -56,7 +48,7 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     res.status(500).json({ 
       error: 'Server Error', 
-      message: 'An internal error occurred during login.' 
+      message: 'An internal error occurred.' 
     });
   }
 });

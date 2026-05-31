@@ -1,38 +1,47 @@
 const Template = require('../models/Template');
 
 class TemplateStore {
-  async createTemplate({ id, name, html, ownerId, css = '' }) {
-    if (!id || !name || !html || !ownerId) {
-      throw new Error('Missing required fields.');
+  async createTemplate(data) {
+    const { name, html, css, userId } = data;
+
+    if (!name || !html || !userId) {
+      throw new Error(`Missing required fields: name=${!!name}, html=${!!html}, userId=${!!userId}`);
     }
+
     try {
-      return await Template.create({ id, name, html, css, ownerId });
+      return await Template.create({
+        name,
+        html,
+        css: css || '',
+        userId 
+      });
     } catch (error) {
-      if (error.name === 'SequelizeUniqueConstraintError') {
-        throw new Error(`Template with ID "${id}" already exists.`);
-      }
+      console.error('Sequelize Insert Error:', error);
       throw error;
     }
   }
 
-  async updateTemplate(id, ownerId, updates) {
-    const template = await Template.findOne({ where: { id, ownerId } });
+  async updateTemplate(id, userId, updates) {
+    const template = await Template.findOne({ where: { id, userId } });
     if (!template) throw new Error('Template not found or unauthorized.');
     return await template.update(updates);
   }
 
-  async getTemplate(id, ownerId) {
-    const template = await Template.findOne({ where: { id, ownerId } });
+  async getTemplate(id, userId) {
+    const template = await Template.findOne({ where: { id, userId } });
     if (!template) throw new Error('Template not found.');
     return template;
   }
 
-  async getAllTemplates(ownerId) {
-    return await Template.findAll({ where: { ownerId } });
+  async getAllTemplates(userId) {
+    return await Template.findAll({ 
+      where: { userId },
+      order: [['createdAt', 'DESC']] 
+    });
   }
 
-  async deleteTemplate(id, ownerId) {
-    const deletedCount = await Template.destroy({ where: { id, ownerId } });
+  async deleteTemplate(id, userId) {
+    const deletedCount = await Template.destroy({ where: { id, userId } });
     if (deletedCount === 0) throw new Error('Template not found.');
     return true;
   }
